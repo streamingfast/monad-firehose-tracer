@@ -6,10 +6,8 @@ FROM categoryxyz/monad-rpc:latest AS monad-rpc
 # Get fireeth from official firehose-ethereum image
 FROM ghcr.io/streamingfast/firehose-ethereum:21195c1 AS fireeth-source
 
-# Build monad-firehose-tracer from source
-FROM ubuntu:24.04 AS tracer-builder
-
-WORKDIR /build
+# Build base with system deps and Rust
+FROM ubuntu:24.04 AS base
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -34,8 +32,24 @@ RUN apt-get update && apt-get install -y \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-COPY . .
+RUN cargo install cargo-chef --locked
 
+FROM base AS planner
+WORKDIR /build
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# compile all dependencies
+FROM base AS cooker
+WORKDIR /build
+COPY --from=planner /build/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# Build step: compile only our source
+FROM base AS tracer-builder
+WORKDIR /build
+COPY --from=cooker /build /build
+COPY . .
 RUN cargo build --release
 
 # Monad image with all binaries and libraries
