@@ -1,0 +1,9 @@
+.envrc
+.sbox
+.DS_Store
+/.claude
+/.firehose-data
+/build
+/dist
+/target
+/.cargo
