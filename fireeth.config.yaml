@@ -9,7 +9,7 @@ start:
     advertise-chain-name: "monad"
     data-dir: ".firehose-data"
 
-    common-first-streamable-block: 31
+    common-first-streamable-block: 0
 
     reader-node-path: "/data/evm-firehose-tracer-rs/target/release/monad-firehose-tracer"
     reader-node-data-dir: "{data-dir}/reader-node"
