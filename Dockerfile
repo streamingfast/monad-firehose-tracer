@@ -6,52 +6,6 @@ FROM categoryxyz/monad-rpc:latest AS monad-rpc
 # Get fireeth from official firehose-ethereum image
 FROM ghcr.io/streamingfast/firehose-ethereum:21195c1 AS fireeth-source
 
-# Build base with system deps and Rust
-FROM ubuntu:24.04 AS base
-
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
-    pkg-config \
-    libssl-dev \
-    cmake \
-    git \
-    libhugetlbfs-dev \
-    libzstd-dev \
-    wget \
-    gnupg \
-    software-properties-common \
-    && wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
-    && add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main" \
-    && apt-get update \
-    && apt-get install -y clang-20 libclang-20-dev llvm-20-dev \
-    && update-alternatives --install /usr/bin/clang clang /usr/lib/llvm-20/bin/clang 100 \
-    && update-alternatives --install /usr/bin/clang++ clang++ /usr/lib/llvm-20/bin/clang++ 100 \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-RUN cargo install cargo-chef --locked
-
-FROM base AS planner
-WORKDIR /build
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-# compile all dependencies
-FROM base AS cooker
-WORKDIR /build
-COPY --from=planner /build/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
-
-# Build step: compile only our source
-FROM base AS tracer-builder
-WORKDIR /build
-COPY --from=cooker /build /build
-COPY . .
-RUN cargo build --release
-
 # Monad image with all binaries and libraries
 FROM ubuntu:24.04 AS monad-stack
 
@@ -79,7 +33,7 @@ RUN --mount=type=bind,from=monad-bft,target=/mnt/monad-bft \
     find /mnt/monad-rpc/usr/local/lib /mnt/monad-rpc/usr/lib -name "*.so*" -type f 2>/dev/null | grep -vE "(libc\.so|libpthread\.so|libdl\.so|libm\.so|librt\.so|libresolv\.so|libutil\.so|libnss_)" | while read f; do cp "$f" /usr/local/lib/ 2>/dev/null || true; done && \
     rm -f /usr/local/lib/libc.so* /usr/local/lib/libpthread.so* /usr/local/lib/libdl.so* /usr/local/lib/libm.so* /usr/local/lib/librt.so* /usr/local/lib/libresolv.so* /usr/local/lib/libutil.so* /usr/local/lib/libnss_*
 
-COPY --from=tracer-builder /build/target/release/monad-firehose-tracer /app/monad-firehose-tracer
+COPY target/release/monad-firehose-tracer /app/monad-firehose-tracer
 COPY --from=fireeth-source /app/fireeth /app/fireeth
 
 FROM monad-stack
