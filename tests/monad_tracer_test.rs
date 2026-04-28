@@ -1,5 +1,5 @@
 use alloy_primitives::{Address, B256, U256};
-use firehose::Opcode;
+use firehose::types::Opcode;
 use firehose_test::{
     alice_addr, bob_addr, miner_addr, parse_firehose_block, system_address, InMemoryBuffer,
 };
@@ -13,7 +13,7 @@ use monad_exec_events::ffi::{
 };
 use monad_exec_events::ExecEvent;
 use monad_firehose_tracer::{FirehosePlugin, MonadConsumerPlugin};
-use pb::sf::ethereum::r#type::v2 as pbeth;
+use firehose::pb::sf::ethereum::r#type::v2 as pbeth;
 
 // FFI helpers
 fn zero_bytes32() -> monad_c_bytes32 {
@@ -443,7 +443,7 @@ impl MonadTracerTester {
                 // FIRE BLOCK {num} {hash} {prev_num} {prev_hash} {lib_num} {timestamp} {base64}
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 let block_num: u64 = parts[2].parse().expect("block_num is a number");
-                let lib_num: u64 = parts[6].parse().expect("lib_num is a number");
+                let lib_num: u64 = parts[7].parse().expect("lib_num is a number");
                 results.push((block_num, lib_num));
             }
         }
@@ -1140,7 +1140,7 @@ fn test_block_header_requests_hash_is_zero_bytes() {
         // requests_hash must be 32 zero bytes, not an empty vec (which would serialize as "0x")
         assert_eq!(
             h.requests_hash,
-            vec![0u8; 32],
+            Some(vec![0u8; 32]),
             "requests_hash must be present as 32 zero bytes"
         );
     });
@@ -1154,7 +1154,7 @@ fn test_block_header_parent_beacon_root_is_zero_bytes() {
         let h = block.header.as_ref().unwrap();
         assert_eq!(
             h.parent_beacon_root,
-            vec![0u8; 32],
+            Some(vec![0u8; 32]),
             "parent_beacon_root must be 32 zero bytes"
         );
     });

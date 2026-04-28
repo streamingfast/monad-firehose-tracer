@@ -16,7 +16,7 @@ name = "monad_tracer_test"
 path = "tests/monad_tracer_test.rs"
 
 [dependencies]
-firehose = { git = "https://github.com/streamingfast/evm-firehose-tracer-rs", branch = "feature/add-monad", package = "firehose" }
+firehose = { git = "https://github.com/streamingfast/evm-firehose-tracer-rs", branch = "feature/add-monad", package = "firehose-tracer" }
 alloy-primitives = "1.5"
 base64 = "0.22"
 clap = { version = "4", features = ["derive", "env"] }
@@ -37,5 +37,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-firehose-test = { git = "https://github.com/streamingfast/evm-firehose-tracer-rs", branch = "feature/add-monad", package = "firehose-test" }
-pb = { git = "https://github.com/streamingfast/evm-firehose-tracer-rs", branch = "feature/add-monad", package = "pb" }
+firehose-test = { git = "https://github.com/streamingfast/evm-firehose-tracer-rs", branch = "feature/add-monad", package = "firehose-tracer-test" }

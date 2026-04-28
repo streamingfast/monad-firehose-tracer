@@ -4,7 +4,11 @@ use crate::{MonadConsumer, MonadConsumerPlugin, TRACER_NAME, TRACER_VERSION};
 use alloy_primitives::{Address, Bytes, B256};
 use eyre::Result;
 use firehose::{
-    types::{AccessTuple, SetCodeAuthorization, StateReader, TxType},
+    config::{ChainConfig, Config},
+    types::{
+        AccessTuple, BlockData, BlockEvent, FinalizedBlockRef, LogData, ReceiptData,
+        SetCodeAuthorization, StateReader, StringError, TxEvent, TxType,
+    },
     Tracer,
 };
 use futures_util::StreamExt;
@@ -61,8 +65,8 @@ impl StateReader for SnapshotStateReader {
 }
 
 /// Monad is a Prague-era chain (EIP-7702 active from genesis).
-fn monad_chain_config(chain_id: u64) -> firehose::ChainConfig {
-    firehose::ChainConfig {
+fn monad_chain_config(chain_id: u64) -> ChainConfig {
+    ChainConfig {
         chain_id,
         shanghai_time: Some(0),
         cancun_time: Some(0),
@@ -71,7 +75,7 @@ fn monad_chain_config(chain_id: u64) -> firehose::ChainConfig {
     }
 }
 
-fn evmc_status_to_error(evmc_status: i32) -> Option<firehose::StringError> {
+fn evmc_status_to_error(evmc_status: i32) -> Option<StringError> {
     let msg = match evmc_status {
         0 => return None,
         1 => "execution failed",
@@ -90,13 +94,13 @@ fn evmc_status_to_error(evmc_status: i32) -> Option<firehose::StringError> {
         14 => "argument out of range",
         17 => "insufficient balance for transfer",
         _ => {
-            return Some(firehose::StringError(format!(
+            return Some(StringError(format!(
                 "unknown error (status {})",
                 evmc_status
             )))
         }
     };
-    Some(firehose::StringError(msg.to_string()))
+    Some(StringError(msg.to_string()))
 }
 
 /// Main Firehose tracer for Monad
@@ -105,11 +109,11 @@ pub struct FirehosePlugin {
     consumer: Option<MonadConsumer>,
     pub tracer: Tracer,
     tx_end_receipt: Option<monad_exec_events::ffi::monad_exec_txn_evm_output>,
-    pending_tx_events: HashMap<usize, firehose::TxEvent>,
+    pending_tx_events: HashMap<usize, TxEvent>,
     // Logs buffered for receipt construction
     // This duplication could be avoided by reading the logs back from the Firehose tracer
     // internal call state instead of buffering them separately here
-    pending_receipt_logs: Vec<firehose::LogData>,
+    pending_receipt_logs: Vec<LogData>,
     // EIP-7702: delegation code changes buffered from TxnAuthListEntry (is_valid_authority=true),
     // emitted as on_code_change when the corresponding AccountAccess arrives (is_nonce_modified=true)
     pending_delegation_code_changes: HashMap<Address, Vec<Vec<u8>>>,
@@ -128,7 +132,7 @@ impl FirehosePlugin {
         Self {
             config,
             consumer: None,
-            tracer: Tracer::new(firehose::Config::new()),
+            tracer: Tracer::new(Config::new()),
             last_finalized_block: 0,
             tx_end_receipt: None,
             pending_tx_events: HashMap::new(),
@@ -151,7 +155,7 @@ impl FirehosePlugin {
         Self {
             config,
             consumer: None,
-            tracer: Tracer::new_with_writer(firehose::Config::new(), writer),
+            tracer: Tracer::new_with_writer(Config::new(), writer),
             last_finalized_block: 0,
             tx_end_receipt: None,
             pending_tx_events: HashMap::new(),
@@ -256,7 +260,7 @@ impl FirehosePlugin {
                 let extra_data_len = ei.extra_data_length as usize;
                 let base_fee = alloy_primitives::U256::from_limbs(ei.base_fee_per_gas.limbs);
 
-                let block_data = firehose::BlockData {
+                let block_data = BlockData {
                     number: block_number,
                     hash: B256::ZERO,
                     parent_hash: B256::from(block_start.parent_eth_hash.bytes),
@@ -289,14 +293,16 @@ impl FirehosePlugin {
                     parent_beacon_root: Some(B256::ZERO),
                     requests_hash: Some(B256::ZERO),
                     tx_dependency: None,
+                    slot_number: None,
                 };
 
-                self.tracer.on_block_start(firehose::BlockEvent {
+                self.tracer.on_block_start(BlockEvent {
                     block: block_data,
-                    finalized: Some(firehose::FinalizedBlockRef {
+                    finalized: Some(FinalizedBlockRef {
                         number: self.last_finalized_block,
                         hash: None,
                     }),
+                    flash_block: None,
                 });
             }
             ExecEvent::BlockEnd(block_end) => {
@@ -333,8 +339,8 @@ impl FirehosePlugin {
                     alloy_primitives::U256::from_limbs(h.max_fee_per_blob_gas.limbs);
                 let tx_type = TxType::try_from(h.txn_type as u8).unwrap_or(TxType::Legacy);
                 // max_fee_per_gas and max_priority_fee_per_gas only apply to EIP-1559
-                let is_eip1559 = h.txn_type >= firehose::TxType::DynamicFee as u8;
-                let tx_event = firehose::TxEvent {
+                let is_eip1559 = h.txn_type >= TxType::DynamicFee as u8;
+                let tx_event = TxEvent {
                     tx_type,
                     hash: B256::from(txn_header_start.txn_hash.bytes),
                     from: alloy_primitives::Address::from(txn_header_start.sender.bytes),
@@ -482,7 +488,7 @@ impl FirehosePlugin {
                 }
                 let receipt = if let Some(output) = self.tx_end_receipt.take() {
                     self.cumulative_gas_used += output.receipt.gas_used;
-                    firehose::ReceiptData {
+                    ReceiptData {
                         transaction_index: self.current_txn_index,
                         gas_used: output.receipt.gas_used,
                         status: if output.receipt.status { 1 } else { 0 },
@@ -494,7 +500,7 @@ impl FirehosePlugin {
                         state_root: None,
                     }
                 } else {
-                    firehose::ReceiptData {
+                    ReceiptData {
                         transaction_index: self.current_txn_index,
                         gas_used: 0,
                         status: 0,
@@ -541,7 +547,7 @@ impl FirehosePlugin {
                     .on_log(addr, &topics, &data_bytes, txn_log.index);
 
                 // also buffer for receipt construction
-                self.pending_receipt_logs.push(firehose::LogData {
+                self.pending_receipt_logs.push(LogData {
                     address: addr,
                     topics,
                     data: alloy_primitives::Bytes::copy_from_slice(&data_bytes),
