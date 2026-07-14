@@ -613,11 +613,25 @@ impl FirehosePlugin {
                 let addr = alloy_primitives::Address::from(account_access.address.bytes);
                 if account_access.is_balance_modified {
                     use firehose::pb::sf::ethereum::r#type::v2::balance_change::Reason;
+
+                    // Monad tags every account access with its context (see
+                    // monad_exec_account_access_context): 0 = block prologue, 1 = transaction,
+                    // 2 = block epilogue. The constants are not re-exported by monad-exec-events,
+                    // so the ABI values are used directly. Prologue/epilogue balance changes are
+                    // not attributable to a transaction and carry their own reason.
+                    const ACCT_ACCESS_TRANSACTION: u8 = 1;
+
+                    let reason = if account_access.access_context == ACCT_ACCESS_TRANSACTION {
+                        Reason::MonadTxPostState
+                    } else {
+                        Reason::MonadBlockPostState
+                    };
+
                     self.tracer.on_balance_change(
                         addr,
                         alloy_primitives::U256::from_limbs(account_access.prestate.balance.limbs),
                         alloy_primitives::U256::from_limbs(account_access.modified_balance.limbs),
-                        Reason::MonadTxPostState,
+                        reason,
                     );
                 }
                 if account_access.is_nonce_modified {

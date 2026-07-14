@@ -38,9 +38,17 @@ fn bytes32_to_ffi(b: B256) -> monad_c_bytes32 {
 }
 
 // MonadTracerTester
+// monad_exec_account_access_context values (see exec_event_ctypes.h).
+const ACCT_ACCESS_BLOCK_PROLOGUE: u8 = 0;
+const ACCT_ACCESS_TRANSACTION: u8 = 1;
+const ACCT_ACCESS_BLOCK_EPILOGUE: u8 = 2;
+
 struct MonadTracerTester {
     plugin: FirehosePlugin,
     output_buffer: InMemoryBuffer,
+    // Context of the account-access list currently being emitted. The real recorder stamps
+    // this on every account_access event, not just the list header, so the builder mirrors it.
+    access_context: u8,
 }
 
 impl MonadTracerTester {
@@ -52,6 +60,7 @@ impl MonadTracerTester {
         Self {
             plugin,
             output_buffer,
+            access_context: ACCT_ACCESS_TRANSACTION,
         }
     }
 
@@ -289,6 +298,7 @@ impl MonadTracerTester {
     }
 
     fn account_access_header(&mut self, access_context: u8) -> &mut Self {
+        self.access_context = access_context;
         self.send(ExecEvent::AccountAccessListHeader(
             monad_exec_account_access_list_header {
                 entry_count: 0,
@@ -300,6 +310,7 @@ impl MonadTracerTester {
     fn account_access_balance(&mut self, addr: Address, old: U256, new: U256) -> &mut Self {
         let mut a: monad_exec_account_access = unsafe { std::mem::zeroed() };
         a.address = addr_to_ffi(addr);
+        a.access_context = self.access_context;
         a.is_balance_modified = true;
         a.prestate.balance = u256_to_ffi(old);
         a.modified_balance = u256_to_ffi(new);
@@ -309,6 +320,7 @@ impl MonadTracerTester {
     fn account_access_nonce(&mut self, addr: Address, old: u64, new: u64) -> &mut Self {
         let mut a: monad_exec_account_access = unsafe { std::mem::zeroed() };
         a.address = addr_to_ffi(addr);
+        a.access_context = self.access_context;
         a.is_nonce_modified = true;
         a.prestate.nonce = old;
         a.modified_nonce = new;
@@ -668,6 +680,59 @@ fn test_balance_change_in_tx() {
             !calls[0].balance_changes.is_empty(),
             "balance change should be in call"
         );
+        for change in &calls[0].balance_changes {
+            assert_eq!(
+                change.reason,
+                pbeth::balance_change::Reason::MonadTxPostState as i32,
+                "transaction-context balance change must carry REASON_MONAD_TX_POST_STATE"
+            );
+        }
+    });
+}
+
+// Balance changes recorded in the block prologue/epilogue are not attributable to a
+// transaction: they land in Block.balance_changes and carry REASON_MONAD_BLOCK_POST_STATE.
+#[test]
+fn test_balance_change_in_block_prologue() {
+    let mut t = MonadTracerTester::new();
+    t.block_start(1, 0)
+        .account_access_header(ACCT_ACCESS_BLOCK_PROLOGUE)
+        .account_access_balance(bob_addr(), U256::from(100u64), U256::from(200u64))
+        .block_end();
+    t.validate(|block| {
+        assert!(
+            !block.balance_changes.is_empty(),
+            "prologue balance change should be at block level"
+        );
+        for change in &block.balance_changes {
+            assert_eq!(
+                change.reason,
+                pbeth::balance_change::Reason::MonadBlockPostState as i32,
+                "block prologue balance change must carry REASON_MONAD_BLOCK_POST_STATE"
+            );
+        }
+    });
+}
+
+#[test]
+fn test_balance_change_in_block_epilogue() {
+    let mut t = MonadTracerTester::new();
+    t.block_start(1, 0)
+        .account_access_header(ACCT_ACCESS_BLOCK_EPILOGUE)
+        .account_access_balance(bob_addr(), U256::from(200u64), U256::from(300u64))
+        .block_end();
+    t.validate(|block| {
+        assert!(
+            !block.balance_changes.is_empty(),
+            "epilogue balance change should be at block level"
+        );
+        for change in &block.balance_changes {
+            assert_eq!(
+                change.reason,
+                pbeth::balance_change::Reason::MonadBlockPostState as i32,
+                "block epilogue balance change must carry REASON_MONAD_BLOCK_POST_STATE"
+            );
+        }
     });
 }
 
