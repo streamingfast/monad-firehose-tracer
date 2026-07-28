@@ -1,6 +1,6 @@
 [package]
 name = "monad-firehose-tracer"
-version = "0.15.1"
+version = "0.15.2"
 edition = "2021"
 authors = ["StreamingFast <info@streamingfast.io>"]
 license = "Apache-2.0"
@@ -16,7 +16,7 @@ name = "monad_tracer_test"
 path = "tests/monad_tracer_test.rs"
 
 [dependencies]
-firehose = { git = "https://github.com/streamingfast/evm-firehose-tracer-rs", branch = "main", package = "firehose-tracer" }
+firehose-tracer = "5.3.0"
 alloy-primitives = "1.5"
 base64 = "0.22"
 clap = { version = "4", features = ["derive", "env"] }
@@ -24,8 +24,8 @@ color-eyre = "0.6"
 eyre = "0.6"
 futures-util = "0.3"
 hex = "0.4"
-monad-exec-events = { git = "https://github.com/streamingfast/monad-bft", rev = "c8b6ea1" }
-monad-event-ring = { git = "https://github.com/streamingfast/monad-bft", rev = "c8b6ea1" }
+monad-exec-events = { git = "https://github.com/streamingfast/monad-bft", tag = "v0.15.2-fh3.0" }
+monad-event-ring = { git = "https://github.com/streamingfast/monad-bft", tag = "v0.15.2-fh3.0" }
 prost = "0.14"
 prost-types = "0.14"
 serde = { version = "1.0", features = ["derive"] }
@@ -37,4 +37,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-firehose-test = { git = "https://github.com/streamingfast/evm-firehose-tracer-rs", branch = "main", package = "firehose-tracer-test" }
+firehose-tracer-test = "5.3.0"
