@@ -1,6 +1,6 @@
 use alloy_primitives::{Address, B256, U256};
-use firehose::types::Opcode;
-use firehose_test::{
+use firehose_tracer::types::Opcode;
+use firehose_tracer_test::{
     alice_addr, bob_addr, miner_addr, parse_firehose_block, system_address, InMemoryBuffer,
 };
 use monad_exec_events::ffi::{
@@ -13,7 +13,7 @@ use monad_exec_events::ffi::{
 };
 use monad_exec_events::ExecEvent;
 use monad_firehose_tracer::{FirehosePlugin, MonadConsumerPlugin};
-use firehose::pb::sf::ethereum::r#type::v2 as pbeth;
+use firehose_tracer::pb::sf::ethereum::r#type::v2 as pbeth;
 
 // FFI helpers
 fn zero_bytes32() -> monad_c_bytes32 {

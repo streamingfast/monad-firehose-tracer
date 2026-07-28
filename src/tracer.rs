@@ -3,7 +3,7 @@
 use crate::{MonadConsumer, MonadConsumerPlugin, TRACER_NAME, TRACER_VERSION};
 use alloy_primitives::{Address, Bytes, B256};
 use eyre::Result;
-use firehose::{
+use firehose_tracer::{
     config::{ChainConfig, Config},
     types::{
         AccessTuple, BlockData, BlockEvent, FinalizedBlockRef, LogData, ReceiptData,
@@ -612,7 +612,7 @@ impl FirehosePlugin {
 
                 let addr = alloy_primitives::Address::from(account_access.address.bytes);
                 if account_access.is_balance_modified {
-                    use firehose::pb::sf::ethereum::r#type::v2::balance_change::Reason;
+                    use firehose_tracer::pb::sf::ethereum::r#type::v2::balance_change::Reason;
                     self.tracer.on_balance_change(
                         addr,
                         alloy_primitives::U256::from_limbs(account_access.prestate.balance.limbs),
@@ -628,7 +628,7 @@ impl FirehosePlugin {
                         for new_code in new_codes {
                             self.tracer
                                 .on_nonce_change(addr, current_nonce, current_nonce + 1);
-                            let new_hash = firehose::utils::hash_bytes(&new_code);
+                            let new_hash = firehose_tracer::utils::hash_bytes(&new_code);
                             self.tracer
                                 .on_code_change(addr, old_hash, new_hash, &[], &new_code);
                             self.delegation_state.set_code(addr, new_code);
