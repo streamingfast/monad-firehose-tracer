@@ -1,0 +1,3 @@
+Tagged release for this project should all end with `-fh3.1` (Firehose Protocol version defined at `<crates>/index.crates.io-1949cf8c6b5b557f/firehose-tracer-5.3.0/src/version.rs#L1`).
+
+If we need to fix stuff or re-release a version, we stay align with chain's version scheme, we simply append an extra `-N` after the mandatory protocol suffix so it looks like `<version>-fh3.1-2` which would be the second re-release (first being `<version>-fh3.1` followed by `<version>-fh3.1-1`).
