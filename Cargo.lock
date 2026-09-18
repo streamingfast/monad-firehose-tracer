@@ -606,12 +606,6 @@ checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
 
 [[package]]
 name = "base64"
-version = "0.22.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
-
-[[package]]
-name = "base64"
 version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
@@ -2008,6 +2002,17 @@ dependencies = [
 [[package]]
 name = "monad-build"
 version = "0.1.0"
+source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.1-fh3.1#dc4d6d688d6962efb94f316e806c747216e6ce34"
+dependencies = [
+ "bindgen",
+ "cargo_metadata",
+ "cc",
+ "cmake",
+]
+
+[[package]]
+name = "monad-build"
+version = "0.1.0"
 source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.2-fh3.1#4ea9f624047ccbd0d957eeb153c6337305834f01"
 dependencies = [
  "bindgen",
@@ -2019,22 +2024,32 @@ dependencies = [
 [[package]]
 name = "monad-event-ring"
 version = "0.1.0"
+source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.1-fh3.1#dc4d6d688d6962efb94f316e806c747216e6ce34"
+dependencies = [
+ "build-rs",
+ "libc",
+ "monad-build 0.1.0 (git+https://github.com/streamingfast/monad-bft?tag=v0.16.1-fh3.1)",
+]
+
+[[package]]
+name = "monad-event-ring"
+version = "0.1.0"
 source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.2-fh3.1#4ea9f624047ccbd0d957eeb153c6337305834f01"
 dependencies = [
  "build-rs",
  "libc",
- "monad-build",
+ "monad-build 0.1.0 (git+https://github.com/streamingfast/monad-bft?tag=v0.16.2-fh3.1)",
 ]
 
 [[package]]
 name = "monad-exec-events"
 version = "0.1.0"
-source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.2-fh3.1#4ea9f624047ccbd0d957eeb153c6337305834f01"
+source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.1-fh3.1#dc4d6d688d6962efb94f316e806c747216e6ce34"
 dependencies = [
  "hex",
  "itertools 0.10.5",
- "monad-build",
- "monad-event-ring",
+ "monad-build 0.1.0 (git+https://github.com/streamingfast/monad-bft?tag=v0.16.1-fh3.1)",
+ "monad-event-ring 0.1.0 (git+https://github.com/streamingfast/monad-bft?tag=v0.16.1-fh3.1)",
  "serde",
  "strum",
  "tracing",
@@ -2045,7 +2060,7 @@ name = "monad-firehose-tracer"
 version = "0.16.2"
 dependencies = [
  "alloy-primitives",
- "base64 0.22.1",
+ "base64",
  "chrono",
  "clap",
  "color-eyre",
@@ -2054,7 +2069,7 @@ dependencies = [
  "firehose-tracer-test",
  "futures-util",
  "hex",
- "monad-event-ring",
+ "monad-event-ring 0.1.0 (git+https://github.com/streamingfast/monad-bft?tag=v0.16.2-fh3.1)",
  "monad-exec-events",
  "prost",
  "prost-types",
@@ -2814,7 +2829,7 @@ version = "3.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "935177bb8c0cd8ca1a4e6d1a2ac8988bea69cab4f9d3a31311e012ad27868ea4"
 dependencies = [
- "base64 0.23.1",
+ "base64",
  "bs58",
  "chrono",
  "hex",
