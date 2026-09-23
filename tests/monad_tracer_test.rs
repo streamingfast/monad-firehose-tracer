@@ -771,6 +771,141 @@ fn test_unmodified_storage_not_mapped() {
     });
 }
 
+#[test]
+fn test_storage_changes_sorted_by_key_within_account() {
+    // Execution emits StorageAccess in `immer::map` traversal order, which is not reproducible
+    // across processes. Deliver them out of key order and require the emitted StorageChanges to
+    // come out sorted by key, with ordinals ascending alongside them.
+    let mut t = MonadTracerTester::new();
+    t.block_start(1, 1)
+        .txn_header_start(0, alice_addr(), Some(bob_addr()))
+        .txn_evm_output_with_frames(0, 21_000, true, 1)
+        .txn_call_frame(0, alice_addr(), bob_addr(), 0xF1, 0, 21_000, 21_000)
+        .account_access_header(1)
+        .account_access_nonce(bob_addr(), 0, 1)
+        .storage_access(
+            bob_addr(),
+            B256::repeat_byte(0x03),
+            B256::ZERO,
+            B256::repeat_byte(0xC3),
+            true,
+            false,
+        )
+        .storage_access(
+            bob_addr(),
+            B256::repeat_byte(0x01),
+            B256::ZERO,
+            B256::repeat_byte(0xC1),
+            true,
+            false,
+        )
+        .storage_access(
+            bob_addr(),
+            B256::repeat_byte(0x02),
+            B256::ZERO,
+            B256::repeat_byte(0xC2),
+            true,
+            false,
+        )
+        .txn_end()
+        .block_end();
+    t.validate(|block| {
+        let changes: Vec<_> = block.transaction_traces[0]
+            .calls
+            .iter()
+            .flat_map(|c| c.storage_changes.iter())
+            .collect();
+        assert_eq!(changes.len(), 3, "all three changes must be emitted");
+
+        let keys: Vec<Vec<u8>> = changes.iter().map(|c| c.key.clone()).collect();
+        let mut sorted = keys.clone();
+        sorted.sort();
+        assert_eq!(keys, sorted, "storage changes must be sorted by key");
+
+        // The key <-> value pairing must survive the reordering.
+        for c in &changes {
+            assert_eq!(
+                c.new_value[0],
+                0xC0 | c.key[0],
+                "value must still belong to its key"
+            );
+        }
+
+        let ordinals: Vec<u64> = changes.iter().map(|c| c.ordinal).collect();
+        let mut ascending = ordinals.clone();
+        ascending.sort();
+        assert_eq!(ordinals, ascending, "ordinals must ascend with array order");
+    });
+}
+
+#[test]
+fn test_storage_changes_sorted_across_accounts() {
+    // Sorting spans the whole access list: a later account whose address sorts lower must
+    // come out ahead of an earlier one, with its own keys sorted too.
+    let mut t = MonadTracerTester::new();
+    t.block_start(1, 1)
+        .txn_header_start(0, alice_addr(), Some(bob_addr()))
+        .txn_evm_output_with_frames(0, 21_000, true, 1)
+        .txn_call_frame(0, alice_addr(), bob_addr(), 0xF1, 0, 21_000, 21_000)
+        .account_access_header(2)
+        .account_access_nonce(bob_addr(), 0, 1)
+        .storage_access(
+            bob_addr(),
+            B256::repeat_byte(0x02),
+            B256::ZERO,
+            B256::repeat_byte(0xB2),
+            true,
+            false,
+        )
+        .storage_access(
+            bob_addr(),
+            B256::repeat_byte(0x01),
+            B256::ZERO,
+            B256::repeat_byte(0xB1),
+            true,
+            false,
+        )
+        .account_access_nonce(alice_addr(), 0, 1)
+        .storage_access(
+            alice_addr(),
+            B256::repeat_byte(0x02),
+            B256::ZERO,
+            B256::repeat_byte(0xA2),
+            true,
+            false,
+        )
+        .storage_access(
+            alice_addr(),
+            B256::repeat_byte(0x01),
+            B256::ZERO,
+            B256::repeat_byte(0xA1),
+            true,
+            false,
+        )
+        .txn_end()
+        .block_end();
+    t.validate(|block| {
+        let changes: Vec<_> = block.transaction_traces[0]
+            .calls
+            .iter()
+            .flat_map(|c| c.storage_changes.iter())
+            .collect();
+        assert_eq!(changes.len(), 4, "all four changes must be emitted");
+
+        // Addresses ascend, regardless of the order they arrived in.
+        let addrs: Vec<Vec<u8>> = changes.iter().map(|c| c.address.clone()).collect();
+        let mut sorted_addrs = addrs.clone();
+        sorted_addrs.sort();
+        assert_eq!(addrs, sorted_addrs, "changes must be sorted by address");
+
+        // ...and keys ascend within each address.
+        assert_eq!(changes[0].key, B256::repeat_byte(0x01).0.to_vec());
+        assert_eq!(changes[1].key, B256::repeat_byte(0x02).0.to_vec());
+        assert_eq!(changes[2].key, B256::repeat_byte(0x01).0.to_vec());
+        assert_eq!(changes[3].key, B256::repeat_byte(0x02).0.to_vec());
+    });
+}
+
 // Interleaved event ordering
 #[test]
 fn test_all_headers_before_any_output() {

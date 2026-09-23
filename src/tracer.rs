@@ -118,6 +118,8 @@ pub struct FirehosePlugin {
     // emitted as on_code_change when the corresponding AccountAccess arrives (is_nonce_modified=true)
     pending_delegation_code_changes: HashMap<Address, Vec<Vec<u8>>>,
     delegation_state: DelegationStateReader,
+    // StorageAccess events, flushed sorted by (address, key) (execution emits them unordered).
+    unsorted_storage_changes: Vec<(Address, B256, B256, B256)>,
     block_txn_count: u64,
     last_finalized_block: u64,
     current_txn_index: u32,
@@ -139,6 +141,7 @@ impl FirehosePlugin {
             pending_receipt_logs: Vec::new(),
             pending_delegation_code_changes: HashMap::new(),
             delegation_state: DelegationStateReader::new(),
+            unsorted_storage_changes: Vec::new(),
             block_txn_count: 0,
             current_txn_index: 0,
             cumulative_gas_used: 0,
@@ -162,6 +165,7 @@ impl FirehosePlugin {
             pending_receipt_logs: Vec::new(),
             pending_delegation_code_changes: HashMap::new(),
             delegation_state: DelegationStateReader::new(),
+            unsorted_storage_changes: Vec::new(),
             block_txn_count: 0,
             current_txn_index: 0,
             cumulative_gas_used: 0,
@@ -178,6 +182,20 @@ impl FirehosePlugin {
                 "{} for txn_index={} but no pending TxEvent",
                 event_name, txn_index
             );
+        }
+    }
+
+    /// Emit the buffered StorageAccess events sorted by (address, key), so the resulting
+    /// StorageChanges and their ordinals are deterministic.
+    fn flush_unsorted_storage_changes(&mut self) {
+        if self.unsorted_storage_changes.is_empty() {
+            return;
+        }
+        let mut unsorted = std::mem::take(&mut self.unsorted_storage_changes);
+        unsorted.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+        for (addr, key, old_value, new_value) in unsorted {
+            self.tracer
+                .on_storage_change(addr, key, old_value, new_value);
         }
     }
 
@@ -481,6 +499,8 @@ impl FirehosePlugin {
             ExecEvent::TxnEnd => {
                 tracing::debug!("txn end");
 
+                self.flush_unsorted_storage_changes();
+
                 let receipt_logs = std::mem::take(&mut self.pending_receipt_logs);
                 let mut bloom = alloy_primitives::Bloom::ZERO;
                 for log in &receipt_logs {
@@ -661,12 +681,12 @@ impl FirehosePlugin {
 
                 if storage_access.modified && !storage_access.transient {
                     let addr = alloy_primitives::Address::from(storage_access.address.bytes);
-                    self.tracer.on_storage_change(
+                    self.unsorted_storage_changes.push((
                         addr,
                         B256::from(storage_access.key.bytes),
                         B256::from(storage_access.start_value.bytes),
                         B256::from(storage_access.end_value.bytes),
-                    );
+                    ));
                 }
             }
 
@@ -708,6 +728,8 @@ impl FirehosePlugin {
                 );
 
                 self.ensure_system_call_account_access_count(system_call_end.num_account_accesses);
+                // Must precede on_call_exit: the buffered changes belong to the call it pops.
+                self.flush_unsorted_storage_changes();
                 let err = evmc_status_to_error(system_call_end.evmc_status as i32);
                 self.tracer.on_call_exit(
                     0,
