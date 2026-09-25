@@ -4,7 +4,7 @@ use crate::{MonadConsumer, MonadConsumerPlugin, TRACER_NAME, TRACER_VERSION};
 use alloy_primitives::{Address, Bytes, B256};
 use eyre::Result;
 use firehose_tracer::{
-    config::{ChainConfig, Config},
+    config::{ChainClient, ChainConfig, Config},
     types::{
         AccessTuple, BlockData, BlockEvent, FinalizedBlockRef, LogData, ReceiptData,
         SetCodeAuthorization, StateReader, StringError, TxEvent, TxType,
@@ -62,6 +62,12 @@ impl StateReader for SnapshotStateReader {
     fn exists(&self, _address: Address) -> bool {
         false
     }
+}
+
+/// Monad reports state changes from a post-hoc state walk rather than in execution order, so
+/// the tracer gives the affected collections a stable order.
+fn monad_tracer_config() -> Config {
+    Config::new().with_chain_client(ChainClient::Monad)
 }
 
 /// Monad is a Prague-era chain (EIP-7702 active from genesis).
@@ -132,7 +138,7 @@ impl FirehosePlugin {
         Self {
             config,
             consumer: None,
-            tracer: Tracer::new(Config::new()),
+            tracer: Tracer::new(monad_tracer_config()),
             last_finalized_block: 0,
             tx_end_receipt: None,
             pending_tx_events: HashMap::new(),
@@ -155,7 +161,7 @@ impl FirehosePlugin {
         Self {
             config,
             consumer: None,
-            tracer: Tracer::new_with_writer(Config::new(), writer),
+            tracer: Tracer::new_with_writer(monad_tracer_config(), writer),
             last_finalized_block: 0,
             tx_end_receipt: None,
             pending_tx_events: HashMap::new(),
@@ -294,6 +300,8 @@ impl FirehosePlugin {
                     requests_hash: Some(B256::ZERO),
                     tx_dependency: None,
                     slot_number: None,
+                    block_access_list_hash: None,
+                    block_access_list_rlp: None,
                 };
 
                 self.tracer.on_block_start(BlockEvent {
