@@ -18,7 +18,7 @@ path = "tests/monad_tracer_test.rs"
 [dependencies]
 firehose-tracer = { git = "https://github.com/streamingfast/evm-firehose-tracer-rs", rev = "43842bb" }
 alloy-primitives = "1.5"
-base64 = "0.22"
+base64 = "0.23"
 clap = { version = "4", features = ["derive", "env"] }
 color-eyre = "0.6"
 eyre = "0.6"
