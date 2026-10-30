@@ -2020,7 +2020,7 @@ dependencies = [
 [[package]]
 name = "monad-build"
 version = "0.1.0"
-source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.2-fh3.1#4ea9f624047ccbd0d957eeb153c6337305834f01"
+source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.5-fh3.1#90ee0536d8f52dffcbdf35ecf845d0f70861839f"
 dependencies = [
  "bindgen",
  "cargo_metadata",
@@ -2031,7 +2031,7 @@ dependencies = [
 [[package]]
 name = "monad-event-ring"
 version = "0.1.0"
-source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.2-fh3.1#4ea9f624047ccbd0d957eeb153c6337305834f01"
+source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.5-fh3.1#90ee0536d8f52dffcbdf35ecf845d0f70861839f"
 dependencies = [
  "build-rs",
  "libc",
@@ -2041,7 +2041,7 @@ dependencies = [
 [[package]]
 name = "monad-exec-events"
 version = "0.1.0"
-source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.2-fh3.1#4ea9f624047ccbd0d957eeb153c6337305834f01"
+source = "git+https://github.com/streamingfast/monad-bft?tag=v0.16.5-fh3.1#90ee0536d8f52dffcbdf35ecf845d0f70861839f"
 dependencies = [
  "hex",
  "itertools 0.10.5",
@@ -2054,7 +2054,7 @@ dependencies = [
 
 [[package]]
 name = "monad-firehose-tracer"
-version = "0.16.2"
+version = "0.16.5"
 dependencies = [
  "alloy-primitives",
  "base64 0.22.1",
