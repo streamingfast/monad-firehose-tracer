@@ -3,6 +3,13 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.16.6-fh3.1
+
+### Changed
+
+* Bump Monad BFT / execution event crates to streamingfast/monad-bft **`v0.16.6-fh3.1`**, pinned by commit.
+* Tracks Monad execution Firehose fork `v0.16.6-fh3.1`. `monad-exec-events` public API unchanged for this bump.
+
 ## v0.16.5-fh3.1
 
 ### Changed
