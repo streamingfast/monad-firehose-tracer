@@ -2020,7 +2020,7 @@ dependencies = [
 [[package]]
 name = "monad-build"
 version = "0.1.0"
-source = "git+https://github.com/streamingfast/monad-bft?rev=39ef69f33cf994b4c7fe588a91b518d9d5376167#39ef69f33cf994b4c7fe588a91b518d9d5376167"
+source = "git+https://github.com/streamingfast/monad-bft?rev=a4b69549f5547ea65e21679ea1798bd4066f06cc#a4b69549f5547ea65e21679ea1798bd4066f06cc"
 dependencies = [
  "bindgen",
  "cargo_metadata",
@@ -2031,7 +2031,7 @@ dependencies = [
 [[package]]
 name = "monad-event-ring"
 version = "0.1.0"
-source = "git+https://github.com/streamingfast/monad-bft?rev=39ef69f33cf994b4c7fe588a91b518d9d5376167#39ef69f33cf994b4c7fe588a91b518d9d5376167"
+source = "git+https://github.com/streamingfast/monad-bft?rev=a4b69549f5547ea65e21679ea1798bd4066f06cc#a4b69549f5547ea65e21679ea1798bd4066f06cc"
 dependencies = [
  "build-rs",
  "libc",
@@ -2041,7 +2041,7 @@ dependencies = [
 [[package]]
 name = "monad-exec-events"
 version = "0.1.0"
-source = "git+https://github.com/streamingfast/monad-bft?rev=39ef69f33cf994b4c7fe588a91b518d9d5376167#39ef69f33cf994b4c7fe588a91b518d9d5376167"
+source = "git+https://github.com/streamingfast/monad-bft?rev=a4b69549f5547ea65e21679ea1798bd4066f06cc#a4b69549f5547ea65e21679ea1798bd4066f06cc"
 dependencies = [
  "hex",
  "itertools 0.10.5",

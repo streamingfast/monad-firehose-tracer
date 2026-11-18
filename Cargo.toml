@@ -24,8 +24,8 @@ color-eyre = "0.6"
 eyre = "0.6"
 futures-util = "0.3"
 hex = "0.4"
-monad-exec-events = { git = "https://github.com/streamingfast/monad-bft", rev = "39ef69f33cf994b4c7fe588a91b518d9d5376167" } # v0.16.6-fh3.1
-monad-event-ring = { git = "https://github.com/streamingfast/monad-bft", rev = "39ef69f33cf994b4c7fe588a91b518d9d5376167" } # v0.16.6-fh3.1
+monad-exec-events = { git = "https://github.com/streamingfast/monad-bft", rev = "a4b69549f5547ea65e21679ea1798bd4066f06cc" } # v0.16.6-fh3.1
+monad-event-ring = { git = "https://github.com/streamingfast/monad-bft", rev = "a4b69549f5547ea65e21679ea1798bd4066f06cc" } # v0.16.6-fh3.1
 prost = "0.14"
 prost-types = "0.14"
 serde = { version = "1.0", features = ["derive"] }
