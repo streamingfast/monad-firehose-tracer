@@ -13,6 +13,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Security
 
 * Add Docker Scout image scan gate (critical/high) to the release workflow.
+* Block releases on the image scan: the build pushes only the commit sha tag, release/moving tags (`vX.Y.Z`, branch, `latest`) are promoted by the gate only after a clean scan.
 
 ## v0.16.5-fh3.1
 
