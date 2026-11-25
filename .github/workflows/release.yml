@@ -83,6 +83,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Release and moving tags, promoted by the image-scan gate once the image is clean
       - name: Generate docker tags/labels from github build context
         id: meta
         uses: docker/metadata-action@v5
@@ -95,9 +96,13 @@ jobs:
           flavor: |
             latest=${{ startsWith(github.ref, 'refs/tags/') }}
 
-      - name: Compute short SHA
+      # The immutable commit tag only, the sole tag pushed by the build and the image scanned by the gate
+      - name: Generate docker sha tag
         id: sha
-        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: type=sha,prefix=,format=short
 
       - name: Build and push Monad Docker image
         id: build
@@ -106,17 +111,18 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.sha.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Scan the image
-        if: ${{ github.actor != 'dependabot[bot]' }}
+      # Promotes the release tags only when the scan is clean, a failure leaves only the sha tag
+      - name: Scan the image and promote tags
         uses: streamingfast/actions/image-scan/gate@v1
         with:
-          # Single-arch image tagged with the short SHA, no per-architecture suffix
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.sha.outputs.short }}
+          image: ${{ steps.sha.outputs.tags }}
+          promote-tags: ${{ steps.meta.outputs.tags }}
           dockerhub-user: ${{ secrets.DOCKER_SCOUT_USER }}
           dockerhub-password: ${{ secrets.DOCKER_SCOUT_PASSWORD }}
           severities: critical,high
