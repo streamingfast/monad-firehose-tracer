@@ -117,8 +117,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Promotes the release tags only when the scan is clean, a failure leaves only the sha tag
+      # Advisory scan: the image ships upstream binaries and libraries we cannot patch, so findings are
+      # reported (job summary) but never block the release, tags are always promoted
       - name: Scan the image and promote tags
+        id: scan
         uses: streamingfast/actions/image-scan/gate@v1
         with:
           image: ${{ steps.sha.outputs.tags }}
@@ -126,6 +128,7 @@ jobs:
           dockerhub-user: ${{ secrets.DOCKER_SCOUT_USER }}
           dockerhub-password: ${{ secrets.DOCKER_SCOUT_PASSWORD }}
           severities: critical,high
+          enforce: false
           # Paths that affect the image contents, only used on pull requests (this workflow does not run on them today)
           scan-paths: |
             ^Dockerfile
@@ -133,6 +136,15 @@ jobs:
             ^Cargo\.lock
             ^\.dockerignore
             ^docker/
+
+      - name: Notify scan findings on Slack
+        if: ${{ steps.scan.outputs.findings == 'true' }}
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        uses: Ilshidur/action-slack@689ad44a9c9092315abd286d0e3a9a74d31ab78a # 2.1.0
+        with:
+          args: ":warning: *${{ github.repository }}* image ${{ steps.sha.outputs.tags }} has critical/high CVEs (advisory, release not blocked), see <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|the run>"
 
   release:
     name: Release
